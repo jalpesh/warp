@@ -95,3 +95,17 @@ We'd like to call out a few of the [open source dependencies](https://docs.warp.
 * [FontKit](https://github.com/servo/font-kit)
 * [Core-foundation](https://github.com/servo/core-foundation-rs)
 * [Smol](https://github.com/smol-rs/smol)
+
+## Addendum: Local LLM Proxy Integration
+
+This fork includes a custom proxy integration to run Warp's AI functionalities entirely locally via [Ollama](https://ollama.com/), bypassing the cloud-dependent `api.warp.dev` backend for AI tasks.
+
+### Features
+* **Privacy-First AI**: All `GenerateDialogue` (Warp AI panel) and `GenerateCommands` requests are intercepted and processed on your local machine.
+* **OpenAI-Compatible Translation**: The included `warp_ollama_proxy.py` transparently translates Warp's proprietary GraphQL requests into Ollama's standard message structures, and repackages the responses so the Warp client natively understands them.
+* **Transparent Pass-Through**: Non-AI requests (like cloud sync, telemetry, and authentication) are forwarded untouched to Warp's official servers.
+
+### Usage
+1. Make sure you have Ollama installed and a model pulled (e.g., `ollama pull llama3`).
+2. Run `./start_local_warp.sh` from the repository root.
+3. The script will automatically spin up the Python FastAPI proxy and launch the Warp client with the `WARP_SERVER_ROOT_URL` overridden to point to `http://127.0.0.1:8080`.
