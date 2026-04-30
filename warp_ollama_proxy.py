@@ -51,15 +51,18 @@ async def proxy_all(request: Request, path: str):
             body_json = json.loads(body)
             op_name = body_json.get("operationName")
             
+            logger.info(f"GraphQL Request: operationName={op_name}")
+            
             if not op_name and "query" in body_json:
-                query_str = body_json["query"]
-                if "GetFeatureModelChoices" in query_str:
+                query_str = body_json["query"].lower()
+                logger.info(f"GraphQL Query string: {query_str[:100]}...")
+                if "getfeaturemodelchoices" in query_str:
                     op_name = "GetFeatureModelChoices"
-                elif "FreeAvailableModels" in query_str:
+                elif "freeavailablemodels" in query_str:
                     op_name = "FreeAvailableModels"
-                elif "GenerateDialogue" in query_str:
+                elif "generatedialogue" in query_str:
                     op_name = "GenerateDialogue"
-                elif "GenerateCommands" in query_str:
+                elif "generatecommands" in query_str:
                     op_name = "GenerateCommands"
                     
             if op_name == "GenerateDialogue":
@@ -210,39 +213,18 @@ async def handle_get_models(request: Request, body_bytes: bytes):
     try:
         data = warp_resp.json()
         
-        local_model = {
-            "id": f"local-{OLLAMA_MODEL}",
-            "displayName": f"Local: {OLLAMA_MODEL}",
-            "baseModelName": OLLAMA_MODEL,
-            "reasoningLevel": None,
-            "description": "Local model running via Ollama",
-            "disableReason": None,
-            "visionSupported": False,
-            "provider": "Unknown",
-            "spec": {
-                "cost": 0.0,
-                "quality": 10.0,
-                "speed": 10.0
-            },
-            "pricing": {
-                "discountPercentage": 100.0
-            },
-            "contextWindow": {
-                "isConfigurable": False,
-                "min": 0,
-                "max": 128000,
-                "default": 8192
-            },
-            "usageMetadata": {
-                "creditMultiplier": 0.0,
-                "requestMultiplier": 0
-            },
-            "hostConfigs": []
-        }
-        
         def inject_local_model(node):
+            import copy
             if isinstance(node, dict):
-                if "choices" in node and isinstance(node["choices"], list):
+                if "choices" in node and isinstance(node["choices"], list) and len(node["choices"]) > 0:
+                    local_model = copy.deepcopy(node["choices"][0])
+                    local_model["id"] = f"local-{OLLAMA_MODEL}"
+                    local_model["displayName"] = f"Local: {OLLAMA_MODEL}"
+                    local_model["baseModelName"] = OLLAMA_MODEL
+                    local_model["disableReason"] = None
+                    local_model["description"] = "Local model running via Ollama"
+                    local_model["provider"] = "UNKNOWN"
+                    
                     if not any(m.get("id") == local_model["id"] for m in node["choices"]):
                         node["choices"].insert(0, local_model)
                     node["defaultId"] = local_model["id"]
@@ -255,6 +237,7 @@ async def handle_get_models(request: Request, body_bytes: bytes):
                 for item in node:
                     inject_local_model(item)
                     
+        logger.info(f"Injecting local model into data: {data.keys() if isinstance(data, dict) else type(data)}")
         inject_local_model(data)
         
         from fastapi.responses import JSONResponse

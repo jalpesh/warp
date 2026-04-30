@@ -54,7 +54,7 @@ source venv/bin/activate
 pip install -q fastapi uvicorn httpx
 
 echo "Starting proxy server on port 8080 (Model: $OLLAMA_MODEL)..."
-python3 warp_ollama_proxy.py &
+python3 warp_ollama_proxy.py > proxy.log 2>&1 &
 PROXY_PID=$!
 
 trap "kill $PROXY_PID" EXIT

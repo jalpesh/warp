@@ -526,9 +526,55 @@ pub struct LLMPreferences {
     base_llm_for_terminal_view: HashMap<EntityId, LLMId>,
 }
 
+fn inject_local_models(models: &mut ModelsByFeature) {
+    let ollama_model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama3.2".to_string());
+    let local_id_str = format!("local-{}", ollama_model);
+    let local_id: ai::LLMId = local_id_str.clone().into();
+    let local_info = LLMInfo {
+        display_name: format!("Local: {}", ollama_model),
+        base_model_name: ollama_model.clone(),
+        id: local_id.clone(),
+        reasoning_level: None,
+        usage_metadata: LLMUsageMetadata {
+            request_multiplier: 0,
+            credit_multiplier: Some(0.0),
+        },
+        description: Some("Local model running via Ollama".to_string()),
+        disable_reason: None,
+        vision_supported: false,
+        spec: None,
+        provider: LLMProvider::Unknown,
+        host_configs: HashMap::new(),
+        discount_percentage: Some(100.0),
+        context_window: LLMContextWindow::default(),
+    };
+
+    if !models.agent_mode.choices.iter().any(|c| c.id == local_id) {
+        models.agent_mode.choices.insert(0, local_info.clone());
+        models.agent_mode.default_id = local_id.clone();
+    }
+    if !models.coding.choices.iter().any(|c| c.id == local_id) {
+        models.coding.choices.insert(0, local_info.clone());
+        models.coding.default_id = local_id.clone();
+    }
+    if let Some(cli_agent) = &mut models.cli_agent {
+        if !cli_agent.choices.iter().any(|c| c.id == local_id) {
+            cli_agent.choices.insert(0, local_info.clone());
+            cli_agent.default_id = local_id.clone();
+        }
+    }
+    if let Some(computer_use) = &mut models.computer_use {
+        if !computer_use.choices.iter().any(|c| c.id == local_id) {
+            computer_use.choices.insert(0, local_info.clone());
+            computer_use.default_id = local_id.clone();
+        }
+    }
+}
+
 impl LLMPreferences {
     pub fn new(ctx: &mut ModelContext<Self>) -> Self {
-        let models_by_feature = get_cached_models(ctx).unwrap_or_default();
+        let mut models_by_feature = get_cached_models(ctx).unwrap_or_default();
+        inject_local_models(&mut models_by_feature);
 
         ctx.subscribe_to_model(&NetworkStatus::handle(ctx), |me, event, ctx| {
             if let NetworkStatusEvent::NetworkStatusChanged {
@@ -926,8 +972,10 @@ impl LLMPreferences {
         }
     }
 
-    fn on_server_update(&mut self, update: ModelsByFeature, ctx: &mut ModelContext<Self>) {
+    fn on_server_update(&mut self, mut update: ModelsByFeature, ctx: &mut ModelContext<Self>) {
         let has_existing_persisted_config = get_cached_models(ctx).is_some();
+
+        inject_local_models(&mut update);
 
         let old = std::mem::replace(&mut self.models_by_feature, update);
 
