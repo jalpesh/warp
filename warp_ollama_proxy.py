@@ -1,3 +1,4 @@
+import os
 import json
 import httpx
 import uvicorn
@@ -13,7 +14,7 @@ app = FastAPI()
 
 WARP_BACKEND = "https://api.warp.dev"
 OLLAMA_URL = "http://127.0.0.1:11434"
-OLLAMA_MODEL = "llama3" # Default model
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3") # Default model
 
 async def forward_to_warp(request: Request, path: str):
     client = httpx.AsyncClient()

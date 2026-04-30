@@ -106,6 +106,10 @@ This fork includes a custom proxy integration to run Warp's AI functionalities e
 * **Transparent Pass-Through**: Non-AI requests (like cloud sync, telemetry, and authentication) are forwarded untouched to Warp's official servers.
 
 ### Usage
-1. Make sure you have Ollama installed and a model pulled (e.g., `ollama pull llama3`).
+1. Make sure you have [Ollama](https://ollama.com/) installed.
 2. Run `./start_local_warp.sh` from the repository root.
-3. The script will automatically spin up the Python FastAPI proxy and launch the Warp client with the `WARP_SERVER_ROOT_URL` overridden to point to `http://127.0.0.1:8080`.
+3. The script will automatically:
+   - Check if Ollama is running (and prompt you if not).
+   - Auto-detect your installed models and pick the best one for coding (like `qwen2.5-coder`, `deepseek-coder`, or `llama3`).
+   - Fallback to downloading `llama3.2` if you don't have any models yet.
+   - Start the proxy and launch the Warp client with the AI traffic rerouted to your local machine!
