@@ -136,5 +136,5 @@ If you prefer to run the components manually without the wrapper script:
 3. **Launch Warp**:
    In a separate terminal, instruct the Warp client to send traffic to your local proxy:
    ```bash
-   WARP_SERVER_ROOT_URL="http://127.0.0.1:8080" cargo run --bin warp --release
+   WARP_SERVER_ROOT_URL="http://127.0.0.1:8080" cargo run --bin warp-oss --release
    ```

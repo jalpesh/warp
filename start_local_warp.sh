@@ -64,6 +64,6 @@ echo "🚀 Starting Warp with local proxy override..."
 if [ -f "$HOME/.cargo/env" ]; then
     source "$HOME/.cargo/env"
 fi
-WARP_SERVER_ROOT_URL="http://127.0.0.1:8080" cargo run --bin warp --release
+WARP_SERVER_ROOT_URL="http://127.0.0.1:8080" cargo run --bin warp-oss --release
 
 echo "Warp exited."

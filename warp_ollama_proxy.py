@@ -57,6 +57,8 @@ async def proxy_all(request: Request, path: str):
             elif op_name == "GenerateCommands":
                 logger.info("Intercepting GenerateCommands GraphQL request")
                 return await handle_generate_commands(body_json)
+            elif op_name in ("GetFeatureModelChoices", "FreeAvailableModels"):
+                return await handle_get_models(request, body)
         except json.JSONDecodeError:
             pass
             
@@ -176,6 +178,79 @@ async def handle_generate_commands(body_json):
     
     from fastapi.responses import JSONResponse
     return JSONResponse(content=graphql_response)
+
+async def handle_get_models(request: Request, body_bytes: bytes):
+    client = httpx.AsyncClient()
+    url = httpx.URL(path="/graphql/v2", query=request.url.query.encode("utf-8"))
+    
+    headers = dict(request.headers)
+    headers.pop("host", None)
+    
+    warp_req = client.build_request(
+        request.method,
+        f"{WARP_BACKEND}{url}",
+        headers=headers,
+        content=body_bytes,
+    )
+    
+    logger.info("Intercepting models GraphQL request to inject local model")
+    warp_resp = await client.send(warp_req)
+    
+    try:
+        data = warp_resp.json()
+        
+        local_model = {
+            "id": f"local-{OLLAMA_MODEL}",
+            "displayName": f"Local: {OLLAMA_MODEL}",
+            "baseModelName": OLLAMA_MODEL,
+            "reasoningLevel": None,
+            "description": "Local model running via Ollama",
+            "disableReason": None,
+            "visionSupported": False,
+            "provider": "Unknown",
+            "spec": {
+                "cost": 0.0,
+                "quality": 10.0,
+                "speed": 10.0
+            },
+            "pricing": {
+                "discountPercentage": 100.0
+            },
+            "contextWindow": {
+                "isConfigurable": False,
+                "min": 0,
+                "max": 128000,
+                "default": 8192
+            },
+            "usageMetadata": {
+                "creditMultiplier": 0.0,
+                "requestMultiplier": 0
+            },
+            "hostConfigs": []
+        }
+        
+        def inject_local_model(node):
+            if isinstance(node, dict):
+                if "choices" in node and isinstance(node["choices"], list):
+                    if not any(m.get("id") == local_model["id"] for m in node["choices"]):
+                        node["choices"].insert(0, local_model)
+                    node["defaultId"] = local_model["id"]
+                    if "preferredCodexModelId" in node:
+                        node["preferredCodexModelId"] = local_model["id"]
+                else:
+                    for k, v in node.items():
+                        inject_local_model(v)
+            elif isinstance(node, list):
+                for item in node:
+                    inject_local_model(item)
+                    
+        inject_local_model(data)
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content=data)
+    except Exception as e:
+        logger.error(f"Failed to modify models response: {e}")
+        return Response(content=warp_resp.content, status_code=warp_resp.status_code, headers=warp_resp.headers)
 
 if __name__ == "__main__":
     logger.info("Starting Warp to Ollama Proxy Server on port 8080...")
