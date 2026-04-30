@@ -105,7 +105,11 @@ This fork includes a custom proxy integration to run Warp's AI functionalities e
 * **OpenAI-Compatible Translation**: The included `warp_ollama_proxy.py` transparently translates Warp's proprietary GraphQL requests into Ollama's standard message structures, and repackages the responses so the Warp client natively understands them.
 * **Transparent Pass-Through**: Non-AI requests (like cloud sync, telemetry, and authentication) are forwarded untouched to Warp's official servers.
 
-### Usage
+### Included Scripts
+* `warp_ollama_proxy.py`: The core FastAPI proxy server. It listens on port 8080, intercepts Warp's GraphQL requests, translates them for Ollama, and passes everything else to `api.warp.dev`.
+* `start_local_warp.sh`: A convenient wrapper script. It handles checking for Ollama, auto-detecting the best coding model, setting up the Python virtual environment, running the proxy in the background, and launching the Warp client.
+
+### Automated Usage (Recommended)
 1. Make sure you have [Ollama](https://ollama.com/) installed.
 2. Run `./start_local_warp.sh` from the repository root.
 3. The script will automatically:
@@ -113,3 +117,24 @@ This fork includes a custom proxy integration to run Warp's AI functionalities e
    - Auto-detect your installed models and pick the best one for coding (like `qwen2.5-coder`, `deepseek-coder`, or `llama3`).
    - Fallback to downloading `llama3.2` if you don't have any models yet.
    - Start the proxy and launch the Warp client with the AI traffic rerouted to your local machine!
+
+### Manual Usage
+If you prefer to run the components manually without the wrapper script:
+
+1. **Ensure Ollama is running** and you have a model pulled (e.g., `ollama pull llama3`).
+2. **Start the Proxy**:
+   ```bash
+   # Install dependencies
+   pip install fastapi uvicorn httpx
+   
+   # Set the model (optional, defaults to llama3)
+   export OLLAMA_MODEL="llama3"
+   
+   # Run the proxy server
+   python3 warp_ollama_proxy.py
+   ```
+3. **Launch Warp**:
+   In a separate terminal, instruct the Warp client to send traffic to your local proxy:
+   ```bash
+   WARP_SERVER_ROOT_URL="http://127.0.0.1:8080" cargo run --bin warp --release
+   ```
