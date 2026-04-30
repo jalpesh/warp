@@ -12,7 +12,7 @@ logger = logging.getLogger("warp_proxy")
 
 app = FastAPI()
 
-WARP_BACKEND = "https://api.warp.dev"
+WARP_BACKEND = os.environ.get("WARP_BACKEND", "https://app.warp.dev")
 OLLAMA_URL = "http://127.0.0.1:11434"
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3") # Default model
 

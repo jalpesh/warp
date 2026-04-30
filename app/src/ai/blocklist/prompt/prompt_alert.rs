@@ -131,6 +131,12 @@ impl PromptAlertView {
     }
 
     pub fn determine_state(app: &AppContext) -> PromptAlertState {
+        // When running with a local LLM (Ollama), all credit/quota alerts are irrelevant
+        // since requests are handled locally and don't consume Warp credits.
+        if crate::ai::llms::is_local_llm_mode_active() {
+            return PromptAlertState::NoAlert;
+        }
+
         // First, if the user is offline, no AI features will work.
         if !NetworkStatus::as_ref(app).is_online() {
             return PromptAlertState::NoConnection;

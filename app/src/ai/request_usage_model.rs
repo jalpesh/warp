@@ -377,8 +377,14 @@ impl AIRequestUsageModel {
     /// 4. user's team plan has pay-as-you-go enabled (enterprise only)
     /// 5. user's team is on enterprise with bonus grants auto-reload enable (enterprise only)
     /// 6. user has BYOK enabled and has provided at least one API key
+    /// 7. local LLM mode is active (Ollama) — no credits needed
     /// Use this method as the starting point for AI availability checking.
     pub fn has_any_ai_remaining(&self, ctx: &AppContext) -> bool {
+        // Local models run on-device and never consume Warp credits.
+        if super::llms::is_local_llm_mode_active() {
+            return true;
+        }
+
         let current_workspace = UserWorkspaces::as_ref(ctx).current_workspace();
 
         let has_base_plan_ai_requests = self.has_requests_remaining();

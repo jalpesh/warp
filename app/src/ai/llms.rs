@@ -40,6 +40,14 @@ pub fn is_using_api_key_for_provider(provider: &LLMProvider, app: &AppContext) -
     }
 }
 
+/// Returns `true` when the user is running in local LLM mode (Ollama).
+/// Checks if the `OLLAMA_MODEL` environment variable is set, which indicates
+/// the app was launched via `start_local_warp.sh` with local model support.
+/// When true, credit/quota checks should be bypassed for local model requests.
+pub fn is_local_llm_mode_active() -> bool {
+    std::env::var("OLLAMA_MODEL").is_ok()
+}
+
 /// Key for cached LLM metadata in user preferences.
 ///
 /// Note: this key used to store a single [`AvailableLLMs`]
