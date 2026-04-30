@@ -51,6 +51,17 @@ async def proxy_all(request: Request, path: str):
             body_json = json.loads(body)
             op_name = body_json.get("operationName")
             
+            if not op_name and "query" in body_json:
+                query_str = body_json["query"]
+                if "GetFeatureModelChoices" in query_str:
+                    op_name = "GetFeatureModelChoices"
+                elif "FreeAvailableModels" in query_str:
+                    op_name = "FreeAvailableModels"
+                elif "GenerateDialogue" in query_str:
+                    op_name = "GenerateDialogue"
+                elif "GenerateCommands" in query_str:
+                    op_name = "GenerateCommands"
+                    
             if op_name == "GenerateDialogue":
                 logger.info("Intercepting GenerateDialogue GraphQL request")
                 return await handle_generate_dialogue(body_json)
